@@ -300,6 +300,8 @@ void load_program() {
 	fclose(fp);
 }
 
+
+
 /************************************************************/
 /* decode and execute instruction                                                                     */ 
 /************************************************************/
@@ -307,6 +309,170 @@ void handle_instruction()
 {
 	/*IMPLEMENT THIS*/
 	/* execute one instruction at a time. Use/update CURRENT_STATE and and NEXT_STATE, as necessary.*/
+
+	uint32_t instr = mem_read_32(CURRENT_STATE.PC);
+	uint32_t msb_6_mask = 0xFC000000; 	// 1111 1100 0000 0000 0000 0000 0000 0000
+	uint32_t lsb_6_mask = 0x0000003F; 	// 0000 0000 0000 0000 0000 0000 0011 1111
+	uint32_t rs_5_mask = 0x03E00000;  	// 0000 0011 1110 0000 0000 0000 0000 0000
+	uint32_t rt_5_mask = 0x001F0000;	// 0000 0000 0001 1111 0000 0000 0000 0000
+	uint32_t immediate_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111	
+	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
+	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
+	uint32_t sign_mask = 0x80000000; //1000 0000 0000 0000 0000 0000 0000 0000
+
+
+	uint32_t top6 = (instr & msb_6_mask) >> 26;
+	uint32_t low6 = instr & lsb_6_mask;
+	uint32_t rs = (instr & rs_5_mask) >> 21;
+	uint32_t rt = (instr & rt_5_mask) >> 16;
+	uint32_t rd = (instr & rd_mask) >> 11;
+	uint32_t sa = (instr & sa_mask) >> 6;
+	uint32_t immediate = instr & immediate_mask;
+	uint32_t temp = 0;
+	uint32_t sign = (CURRENT_STATE.REGS[rt] & sign_mask) >> 31;
+	uint32_t op1;
+	uint32_t op2;
+	
+	printf("top6: %x\n", top6);
+	printf("reg: %x\n", CURRENT_STATE.REGS[2]);
+
+	if(top6 == 0) { 
+		
+		if(low6 == 0xC) {						//SYSCALL
+			if(CURRENT_STATE.REGS[2] == 0xA)
+			{
+				RUN_FLAG = FALSE;
+			}
+		}
+
+		if(low6 == 0x1A){						//DIV
+			if(CURRENT_STATE.REGS[rt] == 0x0)
+			{
+				printf("CANNOT DIVIDE BY 0\n");
+				//Flag "Z"
+			}
+			else
+			{
+				op1 = CURRENT_STATE.REGS[rs]; 	
+				op2 = CURRENT_STATE.REGS[rt]; 
+
+				temp = op1 / op2;
+				NEXT_STATE.LO = temp; 		//place result in LO				
+				
+				temp = op1 % op2;
+				NEXT_STATE.HI = temp;		//place remainder in HI
+			}
+		}
+
+		if(low6 == 0x1B){						//DIVU
+			if(CURRENT_STATE.REGS[rt] == 0x0)
+			{
+				printf("CANNOT DIVIDE BY 0\n");
+				//Flag "Z"
+			}
+			else
+			{
+				op1 = CURRENT_STATE.REGS[rs]; 	
+				op2 = CURRENT_STATE.REGS[rt]; 
+
+				temp = op1 / op2;
+				NEXT_STATE.LO = temp; 		//place result in LO				
+				
+				temp = op1 % op2;
+				NEXT_STATE.HI = temp;		//place remainder in HI
+			}
+		}
+		
+		if(low6 == 0x24){						//AND
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] & CURRENT_STATE.REGS[rt];
+
+		}
+		
+		if(low6 == 0x25){						//OR
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] | CURRENT_STATE.REGS[rt];
+		}
+
+		if(low6 == 39){							//NOR
+			NEXT_STATE.REGS[rd] = ~ (CURRENT_STATE.REGS[rs] | CURRENT_STATE.REGS[rt]);
+		}
+		
+		if(low6 == 0x26){						//XOR
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] ^ (0 | CURRENT_STATE.REGS[rt]);
+		}
+
+		if(low6 == 42){							//SLT
+			if(CURRENT_STATE.REGS[rs] < CURRENT_STATE.REGS[rt])
+			{
+				NEXT_STATE.REGS[rd] = 1;
+			}
+			else 
+			{
+				NEXT_STATE.REGS[rd] = 0;
+			}
+		}
+
+		if(low6 == 0){							//SLL
+			NEXT_STATE.REGS[rd] = (CURRENT_STATE.REGS[rt] << sa) | 0;
+		}
+
+		if(low6 == 2){							//SRL
+			NEXT_STATE.REGS[rd] = (CURRENT_STATE.REGS[rt] >> sa) | 0;
+		}
+		
+		if(low6 == 3){							//SRA
+			if (sign == 1){
+                		uint32_t value = (0xFFFFFFFF << (32 - sa)) | 0;
+				NEXT_STATE.REGS[rd] = (CURRENT_STATE.REGS[rt] >> sa) | value;
+            		}
+		    	else 
+		   	{
+		        	NEXT_STATE.REGS[rd] = (CURRENT_STATE.REGS[rt] >> sa) | 0;
+		    	}
+		}
+
+		if(low6 == 0x10){						//MFHI
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.HI;
+		}
+
+		if(low6 == 0x12){						//MFLO
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.LO;
+		}
+
+		if(low6 == 0x11){						//MTHI
+			NEXT_STATE.HI = CURRENT_STATE.REGS[rs];
+		}
+
+		if(low6 == 0x13){						//MTLO
+			NEXT_STATE.LO = CURRENT_STATE.REGS[rs];
+		}
+	}
+
+	if(top6 == 10){								//SLTI
+		if(CURRENT_STATE.REGS[rs] < immediate)
+		{
+			NEXT_STATE.REGS[rt] = 1;
+		}
+		else 
+		{
+			NEXT_STATE.REGS[rt] = 0;
+		}	
+
+	}
+
+	if(top6 == 14){								//XORI
+		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] ^ (0 | immediate);
+	}
+
+	if(top6 == 0x0C){							//ANDI
+		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] & immediate;
+	}
+	
+	if(top6 == 0x0D){							//ORI
+		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | immediate;
+	}
+	
+
+	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 
@@ -325,6 +491,11 @@ void initialize() {
 /************************************************************/
 void print_program(){
 	/*IMPLEMENT THIS*/
+	int i;
+	for(i=0; i<PROGRAM_SIZE*4; i+=4) {
+		uint32_t instr = mem_read_32(MEM_TEXT_BEGIN + i);
+		printf("%x\n", instr); 
+	}
 }
 
 /***************************************************************/
