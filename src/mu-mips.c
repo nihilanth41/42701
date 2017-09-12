@@ -320,7 +320,6 @@ void handle_instruction()
 	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
 	uint32_t sign_mask = 0x80000000; //1000 0000 0000 0000 0000 0000 0000 0000
 
-
 	uint32_t top6 = (instr & msb_6_mask) >> 26;
 	uint32_t low6 = instr & lsb_6_mask;
 	uint32_t rs = (instr & rs_5_mask) >> 21;
@@ -343,6 +342,22 @@ void handle_instruction()
 			{
 				RUN_FLAG = FALSE;
 			}
+		}
+
+		if(0x18 == low6) { 						//MULT
+			// p.586
+			// {HI, LO} = rs*rt
+			// Is this right? Shift the high order bits over?
+			uint64_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
+			NEXT_STATE.HI = (mul_tmp & 0xFFFF0000) >> 16;
+			NEXT_STATE.LO = (mul_tmp & 0x0000FFFF);
+		}
+		
+		if(0x19 == low6) {						//MULTU p588
+			// Same as MULT (for now?)
+			uint64_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
+			NEXT_STATE.HI = (mul_tmp & 0xFFFF0000) >> 16;
+			NEXT_STATE.LO = (mul_tmp & 0x0000FFFF);
 		}
 
 		if(low6 == 0x1A){						//DIV
@@ -381,6 +396,28 @@ void handle_instruction()
 				temp = op1 % op2;
 				NEXT_STATE.HI = temp;		//place remainder in HI
 			}
+		}
+
+		if(0x20 == low6) { 					  	//ADD
+			// b10 0000 
+			// ADD rd = rs+rt
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
+		}
+
+		if(0x21 == low6) { 						//ADDU
+			// rd = rs + rt 
+			// No overflow
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
+		}
+
+		if(0x22 == low6) { 						//SUB
+			// rd = rs - rt
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
+		}
+
+		if(0x23 == low6) { 						//SUBU
+			// rd = rs - rt p.619
+			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
 		}
 		
 		if(low6 == 0x24){						//AND
@@ -445,6 +482,22 @@ void handle_instruction()
 		if(low6 == 0x13){						//MTLO
 			NEXT_STATE.LO = CURRENT_STATE.REGS[rs];
 		}
+	}
+
+	if(0x08 == top6) { 							// ADDI
+		// b00 1000
+		// rt = rs + immediate
+		// Sign extend - move 15th bit (sign bit) to MSB of 32-bit
+		uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
+		immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
+		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+	}
+
+	if(0x09 == top6) { 							// ADDIU
+		// rt = immediate + rs 
+		uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
+		immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
+		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
 	}
 
 	if(top6 == 10){								//SLTI
