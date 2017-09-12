@@ -319,6 +319,9 @@ void handle_instruction()
 	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
 	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
 	uint32_t sign_mask = 0x80000000; //1000 0000 0000 0000 0000 0000 0000 0000
+    uint32_t sign_mask_2 = 0x00008000; //0000 0000 0000 0000 1000 0000 0000 0000
+    uint32_t offset_mask = 0x0000FFFF; //0000 0000 0000 0000 1111 1111 1111 1111
+    uint32_t base_mask = 0x03E00000; //0000 0011 1110 0000 0000 0000 0000 0000
 
 	uint32_t top6 = (instr & msb_6_mask) >> 26;
 	uint32_t low6 = instr & lsb_6_mask;
@@ -329,6 +332,9 @@ void handle_instruction()
 	uint32_t immediate = instr & immediate_mask;
 	uint32_t temp = 0;
 	uint32_t sign = (CURRENT_STATE.REGS[rt] & sign_mask) >> 31;
+    uint32_t offset = instr & offset_mask;
+    uint32_t sign_2 = (offset & sign_mask_2) >> 15;
+    uint32_t base = (instr & base_mask) >> 21;
 	uint32_t op1;
 	uint32_t op2;
 	
@@ -558,7 +564,80 @@ void handle_instruction()
 	if(top6 == 0x0D){							//ORI
 		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | immediate;
 	}
+    
+    if(top6 == 15) {                            //LUI
+				NEXT_STATE.REGS[rt] = (immediate << 16) | 0;
+	}
+    
+    if(top6 == 32) {                            //LB
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFF;
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFF;
+        }    
+    }
+    
+    if(top6 == 33) {                            //LH
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFFFF;
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFFFF;
+        }    
+    }
+    
+    if(top6 == 35) {                            //LW
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset);
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            NEXT_STATE.REGS[rt] = mem_read_32(offset);
+        }    
+    }
+    
+    if(top6 == 40) {                            //SB
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFF;
+            mem_write_32(offset, temp);
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFF;
+            mem_write_32(offset, temp);
+        }    
+    }
+    
+    if(top6 == 41) {                            //SH
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFFFF;
+            mem_write_32(offset, temp);
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFFFF;
+            mem_write_32(offset, temp);
+        }    
+    }
 	
+    if(top6 == 43) {                            //SW
+        if (sign_2 == 1){
+            offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
+            mem_write_32(offset, CURRENT_STATE.REGS[rt]);
+        }    
+        if (sign_2 == 0){
+            offset = (offset | 0) + CURRENT_STATE.REGS[base];
+            mem_write_32(offset, CURRENT_STATE.REGS[rt]);
+        }    
+    }
 
 	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
