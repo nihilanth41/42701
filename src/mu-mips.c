@@ -336,6 +336,15 @@ void handle_instruction()
 	printf("reg: %x\n", CURRENT_STATE.REGS[2]);
 
 	if(top6 == 0) { 
+
+		if(0x08 == low6) {						// JR Jump Reg.
+			// p548
+
+		} 
+		
+		if(0x09 == low6) { 						// JALR 
+			// Jump and Link Register p547
+		}
 		
 		if(low6 == 0xC) {						//SYSCALL
 			if(CURRENT_STATE.REGS[2] == 0xA)
@@ -482,6 +491,32 @@ void handle_instruction()
 		if(low6 == 0x13){						//MTLO
 			NEXT_STATE.LO = CURRENT_STATE.REGS[rs];
 		}
+	}
+
+	if(0x01 == top6) {							//
+
+		if(0x00 == rt) {	// BLTZ Branch Less Than Zero
+			//p503
+		}
+		else if(0x01 == rt) {	// BGEZ Branch Greater Than or Eq Zero
+			//p495
+
+		}
+	}
+
+	if(0x02 == top6) {		// J Jump
+		// P545
+
+
+	}
+
+	if(0x03 == top6) {		// JAL Jump and Link
+		// P546
+	}
+
+
+	if(0x07 == top6) { 		// BGTZ Branch On Greater than Zero
+		// p499
 	}
 
 	if(0x08 == top6) { 							// ADDI
