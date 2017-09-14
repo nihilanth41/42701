@@ -520,6 +520,24 @@ void handle_instruction()
 		// P546
 	}
 
+        if(top6 == 0x4){                                                        //BEQ
+            if(CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt]){
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!
+            }
+        }
+
+        if(top6 == 0x5){                                                        //BNE
+            if(CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt]){                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!
+            }
+        }
+
+        if(top6 == 0x6){
+            if(CURRENT_STATE.REGS[rs] == 0 || CURRENT_STATE.REGS[rs] < 0){      //BLEZ             
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!   
+            }
+        }
+
 
 	if(0x07 == top6) { 		// BGTZ Branch On Greater than Zero
 		// p499
