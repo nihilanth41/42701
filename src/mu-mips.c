@@ -674,10 +674,64 @@ void print_program(){
 		uint32_t rt = (instr & rt_5_mask) >> 16;
 		uint32_t rd = (instr & rd_mask) >> 11;
 		uint32_t immediate = instr & immediate_mask;
+		uint32_t target = (instr & 0x06FFFF);
 		printf("%8x\t", instr);
 		switch(top6) {
 			case 0x00: { 
 					   switch(low6) {
+						   case 0x02: {
+								      printf("SRL %u, %u, sa\n", rd, rt);
+								      break;
+							      }
+						   case 0x03: {
+								      // TODO SA
+								      printf("SRA %u, %u, sa\n", rd, rt);
+								      break;
+							      }
+						   case 0x08: {
+								      printf("JR %d\n", rs);
+								      break;
+							      }
+						   case 0x09: { 
+								      printf("JALR %d\n", rs);
+								      break;
+							      }
+						   case 0x0D: {
+								      printf("ORI %u, %u, %u\n", rt, rs, immediate);
+								      break;
+							      }
+						   case 0x10: {
+								      printf("MFHI %u\n", rd);
+								      break;
+							      }
+						   case 0x11: { 
+								      printf("MTHI %u\n", rs);
+								      break;
+							      }
+						   case 0x12: {
+								      printf("MFLO %u\n", rd);
+								      break;
+							      }
+						   case 0x13: {
+								      printf("MTLO %u\n", rs);
+								      break;
+							      }
+						   case 0x18: {
+								      printf("MULT %u, %u\n", rs, rt);
+								      break;
+							      }
+						   case 0x19: {
+								      printf("MULTU %u, %u\n", rs, rt);
+								      break;
+							      }
+						   case 0x1A: {
+								      printf("DIV %d, %d\n", rs, rt);
+								      break;
+							      }
+						   case 0x1B: {
+								      printf("DIVU %d, %d\n", rs, rt);
+								      break;
+							      }
 						   case 0x20: { 
 								      printf("ADD %d, %d, %d\n", rd, rs, rt); 
 								      break;
@@ -686,8 +740,32 @@ void print_program(){
 								      printf("ADDU %d, %d, %d\n", rd, rs, rt); 
 								      break;
 							      }
+						   case 0x22: {
+								      printf("SUB %u, %u, %u\n", rd, rs, rt);
+								      break;
+							      }
+						   case 0x23: {
+								      printf("SUBU %u, %u, %u\n", rd, rs, rt);
+								      break;
+							      }
 						   case 0x24: { 
 								      printf("AND %d, %d, %d\n", rd, rs, rt);
+								      break;
+							      }
+						   case 0x25: {
+								      printf("OR %u, %u, %u\n", rd, rs, rt);
+								      break;
+							      }
+						   case 0x26: {
+								      printf("XOR %u, %u, %u\n", rd, rs, rt);
+								      break;
+							      }
+						   case 0x27: {
+								      printf("NOR %u, %u, %u\n", rd, rs, rt);
+								      break;
+							      }
+						   case 0x2A: {
+								      printf("SLT %u, %u, %u\n", rd, rs, rt);
 								      break;
 							      }
 
@@ -714,6 +792,16 @@ void print_program(){
 
 					   }
 				   }
+			case 0x02: {
+					   // J
+					   printf("J %d\n", target);
+					   break;
+				   }
+			case 0x03: {
+					   // JAL
+					   printf("JAL %d\n", target);
+					   break;
+				   }
 			case 0x04: { 	
 					   // BEQ
 					   printf("BEQ %d, %d, %d\n", rs, rt, immediate);
@@ -734,7 +822,6 @@ void print_program(){
 					   printf("BGTZ %d, %d\n", rs, immediate);
 					   break;
 				   }
-					
 			case 0x08: {
 					   // ADDI
 					   printf("ADDI %d, %d, %d\n", rt, rs, immediate);
@@ -744,11 +831,52 @@ void print_program(){
 					   printf("ADDIU %d, %d, %d\n", rt, rs, immediate);
 					   break;
 				   }
+			case 0x0A: {
+					   // SLTI
+					   printf("SLTI %u, %u, %u\n", rt, rs, immediate);
+				   }
 			case 0x0C: {	   // ANDI
 					   printf("ANDI %d, %d, %d\n", rt, rs, immediate);
 					   break;
 
 				   }
+			case 0x0E: {
+					   // XORI
+					   printf("XORI %u, %u, %u\n", rt, rs, immediate);
+					   break;
+				   }
+			case 0x20: {
+					   // LB
+					   // TODO offset, base
+					   printf("LB %d, offset(base)\n", rt);
+					   break;
+				   }
+			case 0x21: {
+					   // LH 
+					   printf("LH %d, offset(base)\n", rt);
+					   break;
+				   }
+			case 0x23: {
+					   // LW
+					   printf("LW %d, offset(base)\n", rt);
+					   break;
+				   }
+			case 0x28: {
+					   // SB
+					   printf("SB %u, offset(base)\n", rt);
+					   break;
+				   }
+			case 0x29: {
+					   // SH
+					   printf("SH %u, offset(base)\n", rt);
+					   break;
+				   }
+			case 0x2B: {
+					   // SW
+					   printf("SW %u, offset(base)\n", rt);
+					   break;
+				   }
+
 
 			default: { 
 					 printf("top6: %x\n", top6);
