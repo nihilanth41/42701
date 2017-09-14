@@ -658,10 +658,105 @@ void initialize() {
 /************************************************************/
 void print_program(){
 	/*IMPLEMENT THIS*/
+	uint32_t msb_6_mask = 0xFC000000; 	// 1111 1100 0000 0000 0000 0000 0000 0000
+	uint32_t lsb_6_mask = 0x0000003F; 	// 0000 0000 0000 0000 0000 0000 0011 1111
+	uint32_t rs_5_mask = 0x03E00000;  	// 0000 0011 1110 0000 0000 0000 0000 0000
+	uint32_t rt_5_mask = 0x001F0000;	// 0000 0000 0001 1111 0000 0000 0000 0000
+	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
+	uint32_t immediate_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111	
+
 	int i;
 	for(i=0; i<PROGRAM_SIZE*4; i+=4) {
 		uint32_t instr = mem_read_32(MEM_TEXT_BEGIN + i);
-		printf("%x\n", instr); 
+		uint32_t top6 = (instr & msb_6_mask) >> 26;
+		uint32_t low6 = (instr & lsb_6_mask);
+		uint32_t rs = (instr & rs_5_mask) >> 21;
+		uint32_t rt = (instr & rt_5_mask) >> 16;
+		uint32_t rd = (instr & rd_mask) >> 11;
+		uint32_t immediate = instr & immediate_mask;
+		printf("%8x\t", instr);
+		switch(top6) {
+			case 0x00: { 
+					   switch(low6) {
+						   case 0x20: { 
+								      printf("ADD %d, %d, %d\n", rd, rs, rt); 
+								      break;
+							      }
+						   case 0x21: {
+								      printf("ADDU %d, %d, %d\n", rd, rs, rt); 
+								      break;
+							      }
+						   case 0x24: { 
+								      printf("AND %d, %d, %d\n", rd, rs, rt);
+								      break;
+							      }
+
+						   default: { 
+								    printf("low6: %x\n", low6);
+								    break;
+							    }
+					   }
+					   break;
+				   }
+			case 0x01: {
+					   switch(rt) {
+						   case 0x00: { 
+								      //BLTZ
+								      printf("BLTZ %d, %d\n", rs, immediate);
+								      break;
+							      }
+						   case 0x01: {
+								      // BGEZ
+								      printf("BGEZ %d, %d\n", rs, immediate);
+								      break;
+							      }
+						   default: break;
+
+					   }
+				   }
+			case 0x04: { 	
+					   // BEQ
+					   printf("BEQ %d, %d, %d\n", rs, rt, immediate);
+					   break;
+				   }
+			case 0x05: {
+					   // BNE
+					   printf("BNE %d, %d, %d\n", rs, rt, immediate);
+					   break;
+				   }
+			case 0x06: { 
+					   // BLEZ
+					   printf("BLEZ %d, %d\n", rs, immediate);
+					   break;
+				   }
+			case 0x07: {
+					   // BGTZ
+					   printf("BGTZ %d, %d\n", rs, immediate);
+					   break;
+				   }
+					
+			case 0x08: {
+					   // ADDI
+					   printf("ADDI %d, %d, %d\n", rt, rs, immediate);
+					   break;
+				   }
+			case 0x09: {	   // ADDIU
+					   printf("ADDIU %d, %d, %d\n", rt, rs, immediate);
+					   break;
+				   }
+			case 0x0C: {	   // ANDI
+					   printf("ANDI %d, %d, %d\n", rt, rs, immediate);
+					   break;
+
+				   }
+
+			default: { 
+					 printf("top6: %x\n", top6);
+					 break;
+				 }
+		}
+
+
 	}
 }
 
