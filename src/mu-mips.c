@@ -318,11 +318,13 @@ void handle_instruction()
 	uint32_t immediate_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111	
 	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
 	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
-	uint32_t sign_mask = 0x80000000; //1000 0000 0000 0000 0000 0000 0000 0000
-    uint32_t sign_mask_2 = 0x00008000; //0000 0000 0000 0000 1000 0000 0000 0000
-    uint32_t offset_mask = 0x0000FFFF; //0000 0000 0000 0000 1111 1111 1111 1111
-    uint32_t base_mask = 0x03E00000; //0000 0011 1110 0000 0000 0000 0000 0000
-
+	uint32_t sign_mask = 0x80000000; 	//1000 0000 0000 0000 0000 0000 0000 0000
+    	uint32_t sign_mask_2 = 0x00008000; 	//0000 0000 0000 0000 1000 0000 0000 0000
+   	uint32_t offset_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111
+    	uint32_t base_mask = 0x03E00000; 	//0000 0011 1110 0000 0000 0000 0000 0000
+	uint32_t target_mask = 0x03FFFFFF;	//0000 0011 1111 1111 1111 1111 1111 1111
+	uint32_t PC_mask = 0xF0000000 		//1111 0000 0000 0000 0000 0000 0000 0000
+						
 	uint32_t top6 = (instr & msb_6_mask) >> 26;
 	uint32_t low6 = instr & lsb_6_mask;
 	uint32_t rs = (instr & rs_5_mask) >> 21;
@@ -332,11 +334,13 @@ void handle_instruction()
 	uint32_t immediate = instr & immediate_mask;
 	uint32_t temp = 0;
 	uint32_t sign = (CURRENT_STATE.REGS[rt] & sign_mask) >> 31;
-    uint32_t offset = instr & offset_mask;
-    uint32_t sign_2 = (offset & sign_mask_2) >> 15;
-    uint32_t base = (instr & base_mask) >> 21;
+    	uint32_t offset = instr & offset_mask;
+    	uint32_t sign_2 = (offset & sign_mask_2) >> 15;
+    	uint32_t base = (instr & base_mask) >> 21;
 	uint32_t op1;
 	uint32_t op2;
+	uint32_t target = (instr & target_mask);
+	uint32_t 4bitPC = (CURRENT_STATE.PC & PC_mask);
 	
 	printf("top6: %x\n", top6);
 	printf("reg: %x\n", CURRENT_STATE.REGS[2]);
@@ -345,11 +349,18 @@ void handle_instruction()
 
 		if(0x08 == low6) {						// JR Jump Reg.
 			// p548
-
+			NEXT_STATE.PC = CURRENT_STATE.REGS[rs];
 		} 
 		
 		if(0x09 == low6) { 						// JALR 
 			// Jump and Link Register p547
+			NEXT_STATE.PC = CURRENT_STATE.REGS[rs];
+			if(rd == 0){			
+				NEXT_STATE.REGS[31] = CURRENT_STATE.REGS[rs];
+			}
+			else{
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs];
+			}
 		}
 		
 		if(low6 == 0xC) {						//SYSCALL
@@ -363,14 +374,14 @@ void handle_instruction()
 			// p.586
 			// {HI, LO} = rs*rt
 			// Is this right? Shift the high order bits over?
-			uint64_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
+			uint32_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
 			NEXT_STATE.HI = (mul_tmp & 0xFFFF0000) >> 16;
 			NEXT_STATE.LO = (mul_tmp & 0x0000FFFF);
 		}
 		
 		if(0x19 == low6) {						//MULTU p588
 			// Same as MULT (for now?)
-			uint64_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
+			uint32_t mul_tmp = CURRENT_STATE.REGS[rs] * CURRENT_STATE.REGS[rt];
 			NEXT_STATE.HI = (mul_tmp & 0xFFFF0000) >> 16;
 			NEXT_STATE.LO = (mul_tmp & 0x0000FFFF);
 		}
@@ -398,7 +409,6 @@ void handle_instruction()
 			if(CURRENT_STATE.REGS[rt] == 0x0)
 			{
 				printf("CANNOT DIVIDE BY 0\n");
-				//Flag "Z"
 			}
 			else
 			{
@@ -414,24 +424,18 @@ void handle_instruction()
 		}
 
 		if(0x20 == low6) { 					  	//ADD
-			// b10 0000 
-			// ADD rd = rs+rt
 			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
 		}
 
 		if(0x21 == low6) { 						//ADDU
-			// rd = rs + rt 
-			// No overflow
 			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
 		}
 
 		if(0x22 == low6) { 						//SUB
-			// rd = rs - rt
 			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
 		}
 
 		if(0x23 == low6) { 						//SUBU
-			// rd = rs - rt p.619
 			NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
 		}
 		
@@ -499,48 +503,108 @@ void handle_instruction()
 		}
 	}
 
-	if(0x01 == top6) {							//
+	if(0x01 == top6) {							
 
-		if(0x00 == rt) {	// BLTZ Branch Less Than Zero
-			//p503
+		if(0x00 == rt) {						// BLTZ
+			if(CURRENT_STATE.REGS[rs] < 0){
+				uint32_t modset = offset << 2;
+				if(sign_2 == 1){
+					modset = (modset & 0x11);
+					NEXT_STATE.PC = CURRENT_STATE.PC + offset;
+				}
+				else {
+					modset = (modset & 0);
+                			NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      
+ 				}
+           		}
 		}
-		else if(0x01 == rt) {	// BGEZ Branch Greater Than or Eq Zero
-			//p495
+		else if(0x01 == rt) {						// BGEZ
+			if(CURRENT_STATE.REGS[rs] > 0 || CURRENT_STATE.REGS[rs] == 0){
+				uint32_t modset = offset << 2;
+				if(sign_2 == 1){
+					modset = (modset & 0x11);
+					NEXT_STATE.PC = CURRENT_STATE.PC + offset;
+				}
+				else {
+					modset = (modset & 0);
+                			NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      
+ 				}
+           		}
 
 		}
 	}
 
-	if(0x02 == top6) {		// J Jump
+	if(0x02 == top6) {							// J Jump
 		// P545
-
+		uint32_t modtarget = target << 2;
+		modtarget = (modtarget & 4bitPC);
+		NEXT_STATE.PC = modtarget;
 
 	}
 
-	if(0x03 == top6) {		// JAL Jump and Link
+	if(0x03 == top6) {							// JAL Jump and Link
 		// P546
+		uint32_t modtarget = target << 2;
+		modtarget = (modtarget & 4bitPC);
+		NEXT_STATE.PC = modtarget;
+		NEXT_STATE.REGS[31] = modtarget;
 	}
 
         if(top6 == 0x4){                                                        //BEQ
             if(CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt]){
-                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!
-            }
+		uint32_t modset = offset << 2;
+		if(sign_2 == 1){
+			modset = (modset & 0x11);
+			NEXT_STATE_PC = CURRENT_STATE.PC + modset;
+		}
+		else {
+			modset = (modset & 0);
+                	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
+ 		}
+           }
         }
 
         if(top6 == 0x5){                                                        //BNE
             if(CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt]){                
-                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!
+                uint32_t modset = offset << 2;
+		if(sign_2 == 1){
+			modset = (modset & 0x11);
+			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
+		}
+		else {
+			modset = (modset & 0);
+                	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
+ 		}
             }
         }
 
         if(top6 == 0x6){
             if(CURRENT_STATE.REGS[rs] == 0 || CURRENT_STATE.REGS[rs] < 0){      //BLEZ             
-                NEXT_STATE.PC = CURRENT_STATE.PC + offset;                      //!!!!!!!!!!!!!!!!!!!!   
+              	uint32_t modset = offset << 2;
+		if(sign_2 == 1){
+			modset = (modset & 0x11);
+			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
+		}
+		else {
+			modset = (modset & 0);
+                	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
+ 		}
             }
         }
 
 
-	if(0x07 == top6) { 		// BGTZ Branch On Greater than Zero
-		// p499
+	if(0x07 == top6) { 		
+	    if(CURRENT_STATE.REGS[rs] > 0){      				//BGTZ             
+              	uint32_t modset = offset << 2;
+		if(sign_2 == 1){
+			modset = (modset & 0x11);
+			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
+		}
+		else {
+			modset = (modset & 0);
+                	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
+ 		}
+            }
 	}
 
 	if(0x08 == top6) { 							// ADDI
@@ -583,11 +647,11 @@ void handle_instruction()
 		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | immediate;
 	}
     
-    if(top6 == 15) {                            //LUI
+    if(top6 == 15) {                            				//LUI
 				NEXT_STATE.REGS[rt] = (immediate << 16) | 0;
 	}
     
-    if(top6 == 32) {                            //LB
+    if(top6 == 32) {                            				//LB
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFF;
@@ -598,7 +662,7 @@ void handle_instruction()
         }    
     }
     
-    if(top6 == 33) {                            //LH
+    if(top6 == 33) {                           	 				//LH
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             NEXT_STATE.REGS[rt] = mem_read_32(offset) | 0xFFFF;
@@ -609,7 +673,7 @@ void handle_instruction()
         }    
     }
     
-    if(top6 == 35) {                            //LW
+    if(top6 == 35) {                            				//LW
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             NEXT_STATE.REGS[rt] = mem_read_32(offset);
@@ -620,7 +684,7 @@ void handle_instruction()
         }    
     }
     
-    if(top6 == 40) {                            //SB
+    if(top6 == 40) {                            				//SB
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFF;
@@ -633,7 +697,7 @@ void handle_instruction()
         }    
     }
     
-    if(top6 == 41) {                            //SH
+    if(top6 == 41) {                            				//SH
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             uint32_t temp = CURRENT_STATE.REGS[rt] | 0xFFFF;
@@ -646,7 +710,7 @@ void handle_instruction()
         }    
     }
 	
-    if(top6 == 43) {                            //SW
+    if(top6 == 43) {                            				//SW
         if (sign_2 == 1){
             offset = (offset | 0xFFFF0000) + CURRENT_STATE.REGS[base];
             mem_write_32(offset, CURRENT_STATE.REGS[rt]);
@@ -682,6 +746,8 @@ void print_program(){
 	uint32_t rt_5_mask = 0x001F0000;	// 0000 0000 0001 1111 0000 0000 0000 0000
 	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
 	uint32_t immediate_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111	
+    	uint32_t offset_mask = 0x0000FFFF; //0000 0000 0000 0000 1111 1111 1111 1111
+    	uint32_t base_mask = 0x03E00000; //0000 0011 1110 0000 0000 0000 0000 0000
 
 	int i;
 	for(i=0; i<PROGRAM_SIZE*4; i+=4) {
@@ -693,6 +759,8 @@ void print_program(){
 		uint32_t rd = (instr & rd_mask) >> 11;
 		uint32_t immediate = instr & immediate_mask;
 		uint32_t target = (instr & 0x06FFFF);
+   		 uint32_t offset = instr & offset_mask;
+   		 uint32_t base = (instr & base_mask) >> 21;
 		printf("%8x\t", instr);
 		switch(top6) {
 			case 0x00: { 
@@ -786,6 +854,10 @@ void print_program(){
 								      printf("SLT %u, %u, %u\n", rd, rs, rt);
 								      break;
 							      }
+						   case 0x0C: {
+								      printf("SYSCALL\n");
+								      break;
+							      }
 
 						   default: { 
 								    printf("low6: %x\n", low6);
@@ -866,32 +938,37 @@ void print_program(){
 			case 0x20: {
 					   // LB
 					   // TODO offset, base
-					   printf("LB %d, offset(base)\n", rt);
+					   printf("LB %d, %d(%d)\n", rt, offset, base);
 					   break;
 				   }
 			case 0x21: {
 					   // LH 
-					   printf("LH %d, offset(base)\n", rt);
+					   printf("LH %d, %d(%d)\n", rt, offset, base);
 					   break;
 				   }
 			case 0x23: {
 					   // LW
-					   printf("LW %d, offset(base)\n", rt);
+					   printf("LW %d, %d(%d)\n", rt, offset, base);
 					   break;
 				   }
 			case 0x28: {
 					   // SB
-					   printf("SB %u, offset(base)\n", rt);
+					   printf("SB %u, %d(%d)\n", rt, offset, base);
 					   break;
 				   }
 			case 0x29: {
 					   // SH
-					   printf("SH %u, offset(base)\n", rt);
+					   printf("SH %u, %d(%d)\n", rt, offset, base);
 					   break;
 				   }
 			case 0x2B: {
 					   // SW
-					   printf("SW %u, offset(base)\n", rt);
+					   printf("SW %u, %d(%d)\n", rt, offset, base);
+					   break;
+				   }
+			case 0x0F: {
+					   // LUI
+					   printf("LUI %u, %d\n", rt, immediate);
 					   break;
 				   }
 
