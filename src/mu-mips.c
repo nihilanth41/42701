@@ -319,11 +319,11 @@ void handle_instruction()
 	uint32_t rd_mask = 0x0000F800; 		//0000 0000 0000 0000 1111 1000 0000 0000
 	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
 	uint32_t sign_mask = 0x80000000; 	//1000 0000 0000 0000 0000 0000 0000 0000
-    	uint32_t sign_mask_2 = 0x00008000; 	//0000 0000 0000 0000 1000 0000 0000 0000
+    uint32_t sign_mask_2 = 0x00008000; 	//0000 0000 0000 0000 1000 0000 0000 0000
    	uint32_t offset_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111
-    	uint32_t base_mask = 0x03E00000; 	//0000 0011 1110 0000 0000 0000 0000 0000
+    uint32_t base_mask = 0x03E00000; 	//0000 0011 1110 0000 0000 0000 0000 0000
 	uint32_t target_mask = 0x03FFFFFF;	//0000 0011 1111 1111 1111 1111 1111 1111
-	uint32_t PC_mask = 0xF0000000 		//1111 0000 0000 0000 0000 0000 0000 0000
+	uint32_t PC_mask = 0xF0000000; 		//1111 0000 0000 0000 0000 0000 0000 0000
 						
 	uint32_t top6 = (instr & msb_6_mask) >> 26;
 	uint32_t low6 = instr & lsb_6_mask;
@@ -334,13 +334,13 @@ void handle_instruction()
 	uint32_t immediate = instr & immediate_mask;
 	uint32_t temp = 0;
 	uint32_t sign = (CURRENT_STATE.REGS[rt] & sign_mask) >> 31;
-    	uint32_t offset = instr & offset_mask;
-    	uint32_t sign_2 = (offset & sign_mask_2) >> 15;
-    	uint32_t base = (instr & base_mask) >> 21;
+    uint32_t offset = instr & offset_mask;
+    uint32_t sign_2 = (offset & sign_mask_2) >> 15;
+    uint32_t base = (instr & base_mask) >> 21;
 	uint32_t op1;
 	uint32_t op2;
 	uint32_t target = (instr & target_mask);
-	uint32_t 4bitPC = (CURRENT_STATE.PC & PC_mask);
+	uint32_t fourbitPC = (CURRENT_STATE.PC & PC_mask);
 	
 	printf("top6: %x\n", top6);
 	printf("reg: %x\n", CURRENT_STATE.REGS[2]);
@@ -537,7 +537,7 @@ void handle_instruction()
 	if(0x02 == top6) {							// J Jump
 		// P545
 		uint32_t modtarget = target << 2;
-		modtarget = (modtarget & 4bitPC);
+		modtarget = (modtarget & fourbitPC);
 		NEXT_STATE.PC = modtarget;
 
 	}
@@ -545,7 +545,7 @@ void handle_instruction()
 	if(0x03 == top6) {							// JAL Jump and Link
 		// P546
 		uint32_t modtarget = target << 2;
-		modtarget = (modtarget & 4bitPC);
+		modtarget = (modtarget & fourbitPC);
 		NEXT_STATE.PC = modtarget;
 		NEXT_STATE.REGS[31] = modtarget;
 	}
@@ -554,8 +554,8 @@ void handle_instruction()
             if(CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt]){
 		uint32_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0x11);
-			NEXT_STATE_PC = CURRENT_STATE.PC + modset;
+			modset = (modset | 0xFFFC0000);
+			NEXT_STATE.PC = CURRENT_STATE.PC + modset - 4;
 		}
 		else {
 			modset = (modset & 0);
@@ -566,10 +566,10 @@ void handle_instruction()
 
         if(top6 == 0x5){                                                        //BNE
             if(CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt]){                
-                uint32_t modset = offset << 2;
+                uint16_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0x11);
-			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
+			modset = (modset | 0xFFFC0000);
+			NEXT_STATE.PC = CURRENT_STATE.PC + modset - 4;
 		}
 		else {
 			modset = (modset & 0);
@@ -582,7 +582,7 @@ void handle_instruction()
             if(CURRENT_STATE.REGS[rs] == 0 || CURRENT_STATE.REGS[rs] < 0){      //BLEZ             
               	uint32_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0x11);
+			modset = (modset & 0xFFFC0000);
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 		}
 		else {
@@ -597,7 +597,7 @@ void handle_instruction()
 	    if(CURRENT_STATE.REGS[rs] > 0){      				//BGTZ             
               	uint32_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0x11);
+			modset = (modset & 0xFFFC0000);
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 		}
 		else {
@@ -611,16 +611,27 @@ void handle_instruction()
 		// b00 1000
 		// rt = rs + immediate
 		// Sign extend - move 15th bit (sign bit) to MSB of 32-bit
-		uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
-		immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
-		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+		//uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
+		//immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
+		if (sign_2 == 1){
+            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
+        }
+        if (sign_2 == 0){
+            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
+        }
 	}
 
 	if(0x09 == top6) { 							// ADDIU
 		// rt = immediate + rs 
-		uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
-		immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
-		NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+		//uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
+		//immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
+		//NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+        if (sign_2 == 1){
+            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
+        }
+        if (sign_2 == 0){
+            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
+        }
 	}
 
 	if(top6 == 10){								//SLTI
