@@ -509,11 +509,11 @@ void handle_instruction()
 			if(CURRENT_STATE.REGS[rs] < 0){
 				uint32_t modset = offset << 2;
 				if(sign_2 == 1){
-					modset = (modset & 0x11);
+					modset = (modset | 0xFFFC0000);
 					NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 				}
 				else {
-					modset = (modset & 0);
+					modset = (modset | 0);
                 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  				}
            		}
@@ -522,11 +522,11 @@ void handle_instruction()
 			if(CURRENT_STATE.REGS[rs] > 0 || CURRENT_STATE.REGS[rs] == 0){
 				uint32_t modset = offset << 2;
 				if(sign_2 == 1){
-					modset = (modset & 0x11);
+					modset = (modset | 0xFFFC0000);
 					NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 				}
 				else {
-					modset = (modset & 0);
+					modset = (modset | 0);
                 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  				}
            		}
@@ -558,7 +558,7 @@ void handle_instruction()
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset - 4;
 		}
 		else {
-			modset = (modset & 0);
+			modset = (modset | 0);
                 	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  		}
            }
@@ -572,7 +572,7 @@ void handle_instruction()
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset - 4;
 		}
 		else {
-			modset = (modset & 0);
+			modset = (modset | 0);
                 	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  		}
             }
@@ -582,11 +582,11 @@ void handle_instruction()
             if(CURRENT_STATE.REGS[rs] == 0 || CURRENT_STATE.REGS[rs] < 0){      //BLEZ             
               	uint32_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0xFFFC0000);
+			modset = (modset | 0xFFFC0000);
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 		}
 		else {
-			modset = (modset & 0);
+			modset = (modset | 0);
                 	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  		}
             }
@@ -597,11 +597,11 @@ void handle_instruction()
 	    if(CURRENT_STATE.REGS[rs] > 0){      				//BGTZ             
               	uint32_t modset = offset << 2;
 		if(sign_2 == 1){
-			modset = (modset & 0xFFFC0000);
+			modset = (modset | 0xFFFC0000);
 			NEXT_STATE.PC = CURRENT_STATE.PC + modset;
 		}
 		else {
-			modset = (modset & 0);
+			modset = (modset | 0);
                 	NEXT_STATE.PC = CURRENT_STATE.PC + modset;                      
  		}
             }
