@@ -342,8 +342,11 @@ void handle_instruction()
 	uint32_t target = (instr & target_mask);
 	uint32_t fourbitPC = (CURRENT_STATE.PC & PC_mask);
 	
-	printf("top6: %x\n", top6);
-	printf("reg: %x\n", CURRENT_STATE.REGS[2]);
+	//printf("top6: %x\n", top6);
+	//printf("reg: %x\n", CURRENT_STATE.REGS[2]);
+
+
+	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 
 	if(top6 == 0) { 
 
@@ -537,7 +540,7 @@ void handle_instruction()
 	if(0x02 == top6) {							// J Jump
 		// P545
 		uint32_t modtarget = target << 2;
-		modtarget = (modtarget & fourbitPC);
+		modtarget = (modtarget + fourbitPC);
 		NEXT_STATE.PC = modtarget;
 
 	}
@@ -545,7 +548,7 @@ void handle_instruction()
 	if(0x03 == top6) {							// JAL Jump and Link
 		// P546
 		uint32_t modtarget = target << 2;
-		modtarget = (modtarget & fourbitPC);
+		modtarget = (modtarget + fourbitPC);
 		NEXT_STATE.PC = modtarget;
 		NEXT_STATE.REGS[31] = modtarget;
 	}
@@ -608,30 +611,21 @@ void handle_instruction()
 	}
 
 	if(0x08 == top6) { 							// ADDI
-		// b00 1000
-		// rt = rs + immediate
-		// Sign extend - move 15th bit (sign bit) to MSB of 32-bit
-		//uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
-		//immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
 		if (sign_2 == 1){
-            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
-        }
-        if (sign_2 == 0){
-            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
-        }
+		    NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
+		}
+		if (sign_2 == 0){
+		    NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
+		}
 	}
 
 	if(0x09 == top6) { 							// ADDIU
-		// rt = immediate + rs 
-		//uint32_t immediate  = (instr & 0x00008000) << 16; // 0000 0000 0000 0000 1000 0000 0000 0000
-		//immediate = immediate & (instr & 0x0000EFFF); // Get everything but sign bit
-		//NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
-        if (sign_2 == 1){
-            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
-        }
-        if (sign_2 == 0){
-            NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
-        }
+		if (sign_2 == 1){
+		    NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0xFFFF0000);
+		}
+		if (sign_2 == 0){
+		    NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (immediate | 0x0);
+		}
 	}
 
 	if(top6 == 10){								//SLTI
@@ -659,7 +653,7 @@ void handle_instruction()
 	}
     
     if(top6 == 15) {                            				//LUI
-				NEXT_STATE.REGS[rt] = (immediate << 16) | 0;
+	NEXT_STATE.REGS[rt] = (immediate << 16) | 0;
 	}
     
     if(top6 == 32) {                            				//LB
@@ -732,7 +726,7 @@ void handle_instruction()
         }    
     }
 
-	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+	
 }
 
 
