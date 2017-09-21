@@ -753,6 +753,7 @@ void print_program(){
 	uint32_t immediate_mask = 0x0000FFFF; 	//0000 0000 0000 0000 1111 1111 1111 1111	
     	uint32_t offset_mask = 0x0000FFFF; //0000 0000 0000 0000 1111 1111 1111 1111
     	uint32_t base_mask = 0x03E00000; //0000 0011 1110 0000 0000 0000 0000 0000
+	uint32_t sa_mask = 0x000007C0; 		//0000 0000 0000 0000 0000 0111 1100 0000
 
 	int i;
 	for(i=0; i<PROGRAM_SIZE*4; i+=4) {
@@ -764,19 +765,23 @@ void print_program(){
 		uint32_t rd = (instr & rd_mask) >> 11;
 		uint32_t immediate = instr & immediate_mask;
 		uint32_t target = (instr & 0x06FFFF);
-   		 uint32_t offset = instr & offset_mask;
-   		 uint32_t base = (instr & base_mask) >> 21;
+		uint32_t offset = instr & offset_mask;
+		uint32_t base = (instr & base_mask) >> 21;
+		uint32_t sa = (instr & sa_mask) >> 6;
 		printf("%8x\t", instr);
 		switch(top6) {
 			case 0x00: { 
 					   switch(low6) {
+						   case 0x00: {
+								      printf("SLL %u, %u, %u\n", rd, rt, sa);
+								      break;
+							      }
 						   case 0x02: {
-								      printf("SRL %u, %u, sa\n", rd, rt);
+								      printf("SRL %u, %u, %u\n", rd, rt, sa);
 								      break;
 							      }
 						   case 0x03: {
-								      // TODO SA
-								      printf("SRA %u, %u, sa\n", rd, rt);
+								      printf("SRA %u, %u, %u\n", rd, rt, sa);
 								      break;
 							      }
 						   case 0x08: {
