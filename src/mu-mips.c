@@ -787,10 +787,6 @@ void print_program(){
 								      printf("JALR %d\n", rs);
 								      break;
 							      }
-						   case 0x0D: {
-								      printf("ORI %u, %u, %u\n", rt, rs, immediate);
-								      break;
-							      }
 						   case 0x10: {
 								      printf("MFHI %u\n", rd);
 								      break;
@@ -933,7 +929,10 @@ void print_program(){
 			case 0x0C: {	   // ANDI
 					   printf("ANDI %d, %d, %d\n", rt, rs, immediate);
 					   break;
-
+				   }
+			case 0x0D: {
+					   printf("ORI %u, %u, %u\n", rt, rs, immediate);
+					   break;
 				   }
 			case 0x0E: {
 					   // XORI
